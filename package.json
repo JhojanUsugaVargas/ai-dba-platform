@@ -1,0 +1,36 @@
+{
+  "name": "ai-dba-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI DBA Platform - Build Day vertical slice (PostgreSQL 17)",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "lab:init": "node scripts/lab.ts init",
+    "lab:start": "node scripts/lab.ts start",
+    "lab:stop": "node scripts/lab.ts stop",
+    "lab:status": "node scripts/lab.ts status",
+    "lab:seed": "node scripts/lab.ts seed",
+    "lab:reset": "node scripts/lab.ts reset",
+    "lab:destroy": "node scripts/lab.ts destroy",
+    "lab:workload": "node scripts/lab.ts workload",
+    "lab:tamper": "node scripts/lab.ts tamper",
+    "demo:reset": "node scripts/lab.ts demo-reset",
+    "ora:setup": "node scripts/oracle-lab.ts setup",
+    "ora:reset": "node scripts/oracle-lab.ts reset",
+    "ora:status": "node scripts/oracle-lab.ts status",
+    "ora:tamper": "node scripts/oracle-lab.ts tamper",
+    "ora:workload": "node scripts/oracle-lab.ts workload",
+    "test:oracle-offline": "node --disable-warning=ExperimentalWarning scripts/smoke-oracle-offline.ts",
+    "test:e2e": "node scripts/e2e.ts",
+    "capture:load": "node scripts/capture-load.ts 4 30",
+    "start": "node --disable-warning=ExperimentalWarning src/server.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "oracledb": "^6.10.0",
+    "pg": "^8.23.0"
+  }
+}

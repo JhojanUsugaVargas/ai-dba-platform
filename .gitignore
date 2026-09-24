@@ -1,0 +1,8 @@
+node_modules/
+.env
+lab/pgdata/
+lab/*.log
+data/
+outbox/
+public/live/
+.vercel/

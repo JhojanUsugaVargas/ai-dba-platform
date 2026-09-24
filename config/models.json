@@ -1,0 +1,17 @@
+{
+  "_comment": "Model routing by task complexity. Prices USD per 1M tokens, verified against the claude-api skill model table (cached 2026-06-24) on 2026-09-23. Re-verify before quoting costs. Deterministic work (collectors, rules, policy, execution, verification) never calls a model.",
+  "pricing_verified_on": "2026-09-23",
+  "models": {
+    "claude-haiku-4-5": { "input_per_mtok": 1.0,  "output_per_mtok": 5.0,  "context": 200000,  "thinking": "budget_tokens (no effort param)" },
+    "claude-sonnet-5":  { "input_per_mtok": 2.0,  "output_per_mtok": 10.0, "context": 1000000, "thinking": "adaptive; effort low..max" },
+    "claude-opus-5-5":  { "input_per_mtok": 4.0,  "output_per_mtok": 20.0, "context": 1000000, "thinking": "always adaptive, cannot be disabled; effort default medium; forced tool_choice any/tool returns 400" },
+    "claude-fable-5-1": { "input_per_mtok": 10.0, "output_per_mtok": 50.0, "context": 1000000, "thinking": "always on; forced tool_choice any/tool returns 400; 30-day retention required" }
+  },
+  "routes": {
+    "LOW":      { "model": "claude-haiku-4-5", "effort": null,     "use_for": ["alert email wording", "short summaries", "simple classification"] },
+    "MEDIUM":   { "model": "claude-sonnet-5",  "effort": "medium", "use_for": ["finding analysis", "catalog action selection (tool use, strict schema)"] },
+    "HIGH":     { "model": "claude-opus-5-5",  "effort": "high",   "use_for": ["multi-finding correlation", "incident root-cause reasoning"] },
+    "CRITICAL": { "model": "claude-opus-5-5",  "effort": "xhigh",  "use_for": ["CRITICAL incidents, on demand only"] }
+  },
+  "_fable_note": "claude-fable-5-1 is not routed by default: 2.5x Opus 5.5 price. Enable only by explicit decision after measuring that Opus 5.5 at xhigh is insufficient."
+}

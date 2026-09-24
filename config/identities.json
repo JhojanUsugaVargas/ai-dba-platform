@@ -1,0 +1,8 @@
+{
+  "_comment": "Build Day simulated identities (no real login). Roles are enforced by the API. 'ai-dba-agent' is the system identity that proposes changes; it can never approve or execute.",
+  "identities": [
+    { "id": "dba.lead", "name": "DBA Lead", "roles": ["viewer", "dba", "approver"] },
+    { "id": "dba.oncall", "name": "DBA On-call", "roles": ["viewer", "dba"] },
+    { "id": "it.manager", "name": "IT Manager", "roles": ["viewer"] }
+  ]
+}

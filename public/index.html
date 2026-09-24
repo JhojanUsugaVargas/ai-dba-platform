@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es-419">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI DBA Platform</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">◆</span> AI DBA Platform <span class="muted small" data-i18n="brand.sub">Build Day · PostgreSQL 17</span></div>
+    <div class="topbar-right">
+      <a href="/intro.html" class="btn" style="text-decoration:none" data-i18n="intro">▶ Intro</a>
+      <span id="llmBadge" class="chip"></span>
+      <span id="autonomyBadge" class="chip"></span>
+      <label class="small muted"><span data-i18n="actingAs">Actuando como</span>
+        <select id="actor"></select>
+      </label>
+      <label class="small muted" title="Idioma / Language">🌐
+        <select id="lang" aria-label="Idioma / Language">
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <button id="killBtn" class="btn danger">EMERGENCY STOP</button>
+    </div>
+  </header>
+  <div id="killBanner" class="banner hidden"></div>
+
+  <nav class="flow" id="flow"></nav>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="overview" class="active" data-i18n="tab.overview">Resumen</button>
+    <button data-tab="findings" data-i18n="tab.findings">Hallazgos y análisis</button>
+    <button data-tab="changes" data-i18n="tab.changes">Cambios y aprobaciones</button>
+    <button data-tab="assessment" data-i18n="tab.assessment">Evidencia</button>
+    <button data-tab="audit" data-i18n="tab.audit">Auditoría</button>
+  </nav>
+
+  <main id="main"></main>
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

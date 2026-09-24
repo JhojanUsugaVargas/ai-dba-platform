@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Informe de cambio · AI DBA Platform</title>
+  <style>
+    @page { size: A4; margin: 14mm 14mm 16mm; }
+    :root { --ink: #16181d; --muted: #5d6573; --line: #dde1e7; --accent: #2f5bd3; --ok: #1d7f4e; --ok-soft: #e3f4ea; --bad: #b3261e; --bad-soft: #fbe5e3; --warn-soft: #fbf0d9; --soft: #f3f5f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: #fff; font: 11pt/1.45 "Segoe UI", system-ui, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { max-width: 190mm; margin: 0 auto; padding: 10px 0; }
+    .break { break-before: page; }
+    .keep, table, .two, .box, .timeline { break-inside: avoid; }
+    h2, h3 { break-after: avoid; }
+    header.top > div:last-child { min-width: 52mm; }
+    header.top { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid var(--accent); padding-bottom: 8px; margin-bottom: 14px; }
+    .brand { color: var(--accent); font-weight: 700; font-size: 10pt; letter-spacing: .06em; }
+    h1 { font-size: 20pt; margin: 2px 0 0; line-height: 1.15; }
+    h2 { font-size: 13.5pt; margin: 18px 0 8px; color: var(--accent); }
+    h3 { font-size: 11pt; margin: 12px 0 6px; }
+    .muted { color: var(--muted); } .small { font-size: 9pt; }
+    .hero { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .kpi { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--soft); }
+    .kpi .v { font-size: 22pt; font-weight: 750; line-height: 1.1; }
+    .kpi .l { font-size: 9pt; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi.good .v { color: var(--ok); } .kpi.bad .v { color: var(--bad); }
+    .lead { font-size: 12.5pt; }
+    .box { border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+    .box.ok { background: var(--ok-soft); } .box.warn { background: var(--warn-soft); } .box.info { background: var(--soft); border: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 6px 0; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-size: 9pt; font-weight: 600; }
+    td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 8.5pt; font-weight: 700; }
+    .tag.m { background: #e8eefc; color: var(--accent); } .tag.d { background: #efe8fc; color: #6b3fc4; } .tag.a { background: var(--warn-soft); color: #9a6400; }
+    .timeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 8px 0; }
+    .timeline div { border-top: 4px solid var(--ok); padding-top: 6px; font-size: 9pt; }
+    .timeline b { display: block; font-size: 9.5pt; }
+    pre { font: 8pt/1.35 Consolas, "Cascadia Code", monospace; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 8px; white-space: pre-wrap; word-break: break-word; margin: 4px 0; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    footer { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 6px; font-size: 8.5pt; color: var(--muted); }
+    .toolbar { position: sticky; top: 0; background: #fff; padding: 8px 0; border-bottom: 1px solid var(--line); display: flex; gap: 8px; }
+    .toolbar button { font: inherit; font-weight: 600; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--accent); color: #fff; cursor: pointer; }
+    @media print { .toolbar { display: none; } .page { max-width: none; padding: 0; } }
+    .err { color: var(--bad); font-weight: 600; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="toolbar" id="toolbar"><button onclick="window.print()">Imprimir / Guardar como PDF</button></div>
+    <div id="root"><p class="muted">Cargando informe…</p></div>
+  </div>
+  <script src="/report.js" type="module"></script>
+</body>
+</html>
