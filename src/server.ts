@@ -8,6 +8,7 @@ import { collectPostgresMetrics } from './collectors/postgresCollector';
 import { collectMssqlMetrics } from './collectors/mssqlCollector';
 import { DataCheckService } from './datacheck/datacheck.service';
 import { analyzeReport } from './ai/analyze';
+import { askSqlAssistant } from './ai/chat';
 import { datacheckRouter } from './routes/datacheckRouter';
 
 const app = express();
@@ -54,6 +55,20 @@ app.post('/analyze', async (req, res) => {
     res.status(500).json({ error: 'Failed to analyze' });
   }
 });
+
+// POST /chat & POST /api/chat – answer SQL errors or questions using Gemini
+const handleChat = async (req: express.Request, res: express.Response) => {
+  try {
+    const question = req.body?.question || '';
+    const answer = await askSqlAssistant(question);
+    res.json({ answer });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to chat' });
+  }
+};
+
+app.post('/chat', handleChat);
+app.post('/api/chat', handleChat);
 
 app.listen(PORT, () => {
   console.log(`AI DBA Monitor listening on http://localhost:${PORT}`);

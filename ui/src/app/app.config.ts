@@ -6,12 +6,14 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
 import { DatacheckComponent } from './components/datacheck/datacheck.component';
 import { AnalysisComponent } from './components/analysis/analysis.component';
+import { ChatComponent } from './components/chat/chat.component';
 
 const routes: Routes = [
   { path: '', component: DashboardComponent },
   { path: 'metrics', component: MetricsComponent },
   { path: 'datacheck', component: DatacheckComponent },
   { path: 'analysis', component: AnalysisComponent },
+  { path: 'chat', component: ChatComponent },
   { path: '**', redirectTo: '' },
 ];
 
