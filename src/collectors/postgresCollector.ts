@@ -4,8 +4,8 @@ import { Pool } from 'pg';
  * Collect PostgreSQL performance metrics.
  * This is a simplified example that queries pg_stat_activity and returns a JSON summary.
  */
-export async function collectPostgresMetrics(): Promise<any> {
-  if (!process.env.PG_CONNECTION_STRING || process.env.PG_CONNECTION_STRING.includes('your_pg')) {
+export async function collectPostgresMetrics(connectionString: string): Promise<any> {
+  if (!connectionString || connectionString.trim() === '' || connectionString.includes('your_pg')) {
     console.warn('PG_CONNECTION_STRING not set. Returning mock data.');
     return {
       totalSessions: 45,
@@ -17,7 +17,7 @@ export async function collectPostgresMetrics(): Promise<any> {
   }
 
   const pool = new Pool({
-    connectionString: process.env.PG_CONNECTION_STRING,
+    connectionString: connectionString,
   });
   try {
     const client = await pool.connect();

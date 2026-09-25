@@ -5,8 +5,8 @@ import sql from 'mssql';
  * This example queries sys.dm_exec_sessions and sys.dm_os_performance_counters
  * to return a simple JSON payload.
  */
-export async function collectMssqlMetrics(): Promise<any> {
-  if (!process.env.MSSQL_CONNECTION_STRING || process.env.MSSQL_CONNECTION_STRING.includes('your_mssql')) {
+export async function collectMssqlMetrics(connectionString: string): Promise<any> {
+  if (!connectionString || connectionString.trim() === '' || connectionString.includes('your_mssql')) {
     console.warn('MSSQL_CONNECTION_STRING not set. Returning mock data.');
     return {
       totalSessions: 120,
@@ -18,7 +18,7 @@ export async function collectMssqlMetrics(): Promise<any> {
   }
 
   const config = {
-    connectionString: process.env.MSSQL_CONNECTION_STRING,
+    connectionString: connectionString,
     options: {
       encrypt: true, // for Azure; adjust as needed
     },

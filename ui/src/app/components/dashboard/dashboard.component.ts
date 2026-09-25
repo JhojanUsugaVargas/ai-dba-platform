@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ApiService } from '../../services/api.service';
+import { ApiService, ServerMetric } from '../../services/api.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -10,7 +10,7 @@ import { ApiService } from '../../services/api.service';
   template: `
     <div class="dashboard-header">
       <h1>🖥️ AI DBA Platform — Dashboard</h1>
-      <p class="subtitle">Monitoreo inteligente de bases de datos PostgreSQL & MSSQL</p>
+      <p class="subtitle">Monitoreo inteligente de múltiples bases de datos</p>
     </div>
 
     <!-- Status Cards -->
@@ -27,57 +27,77 @@ import { ApiService } from '../../services/api.service';
 
     <!-- Summary Cards -->
     <div class="cards">
-      <div class="card card-pg" (click)="loadMetrics()">
-        <div class="card-icon">🐘</div>
-        <div class="card-body">
-          <h3>PostgreSQL</h3>
-          <div *ngIf="metrics?.postgres; else pgLoading">
-            <div class="metric-value">{{ metrics.postgres.totalSessions ?? 0 }}</div>
-            <div class="metric-label">Sesiones totales</div>
-            <div class="metric-detail">
-              <span class="badge active">{{ metrics.postgres.activeSessions ?? 0 }} activas</span>
-              <span class="badge idle">{{ (metrics.postgres.totalSessions ?? 0) - (metrics.postgres.activeSessions ?? 0) }} idle</span>
-            </div>
-            <div class="metric-detail" *ngIf="metrics.postgres.avgQuerySeconds !== undefined">
-              ⏱️ Avg query: {{ metrics.postgres.avgQuerySeconds | number:'1.2-2' }}s
-            </div>
+      <ng-container *ngIf="metrics && metrics.length > 0; else noMetrics">
+        <div *ngFor="let server of metrics" class="card" [ngClass]="'card-' + server.type" (click)="loadMetrics()">
+          <div class="card-icon">
+            <ng-container [ngSwitch]="server.type">
+              <span *ngSwitchCase="'postgres'">🐘</span>
+              <span *ngSwitchCase="'mssql'">🔷</span>
+              <span *ngSwitchCase="'mongodb'">🍃</span>
+              <span *ngSwitchCase="'redis'">⚡</span>
+            </ng-container>
           </div>
-          <ng-template #pgLoading>
-            <p class="hint">Click para cargar métricas</p>
-          </ng-template>
-        </div>
-      </div>
+          <div class="card-body">
+            <h3>{{ server.name }}</h3>
 
-      <div class="card card-mssql" (click)="loadMetrics()">
-        <div class="card-icon">🔷</div>
-        <div class="card-body">
-          <h3>MSSQL Server</h3>
-          <div *ngIf="metrics?.mssql; else mssqlLoading">
-            <div class="metric-value">{{ metrics.mssql.totalSessions ?? 0 }}</div>
-            <div class="metric-label">Sesiones totales</div>
-            <div class="metric-detail">
-              <span class="badge active">{{ metrics.mssql.activeSessions ?? 0 }} activas</span>
+            <div *ngIf="server.type === 'postgres'">
+              <div class="metric-value">{{ server.metrics.totalSessions ?? 0 }}</div>
+              <div class="metric-label">Sesiones totales</div>
+              <div class="metric-detail">
+                <span class="badge active">{{ server.metrics.activeSessions ?? 0 }} activas</span>
+              </div>
+              <div class="metric-detail" *ngIf="server.metrics.avgQuerySeconds !== undefined">
+                ⏱️ Avg query: {{ server.metrics.avgQuerySeconds | number:'1.2-2' }}s
+              </div>
             </div>
-            <div class="metric-detail" *ngIf="metrics.mssql.cpuUsagePercent !== undefined">
-              🔥 CPU: {{ metrics.mssql.cpuUsagePercent | number:'1.1-1' }}%
+
+            <div *ngIf="server.type === 'mssql'">
+              <div class="metric-value">{{ server.metrics.totalSessions ?? 0 }}</div>
+              <div class="metric-label">Sesiones totales</div>
+              <div class="metric-detail">
+                <span class="badge active">{{ server.metrics.activeSessions ?? 0 }} activas</span>
+              </div>
+              <div class="metric-detail" *ngIf="server.metrics.cpuUsagePercent !== undefined">
+                🔥 CPU: {{ server.metrics.cpuUsagePercent | number:'1.1-1' }}%
+              </div>
             </div>
+
+            <div *ngIf="server.type === 'mongodb'">
+              <div class="metric-value">{{ server.metrics.activeConnections ?? 0 }}</div>
+              <div class="metric-label">Active Connections</div>
+              <div class="metric-detail">
+                Queries/sec: {{ server.metrics.queriesPerSec ?? 0 }}
+              </div>
+              <div class="metric-detail" *ngIf="server.metrics.dbSizeGb !== undefined">
+                📦 Size: {{ server.metrics.dbSizeGb | number:'1.1-2' }} GB
+              </div>
+            </div>
+
+            <div *ngIf="server.type === 'redis'">
+              <div class="metric-value">{{ server.metrics.connectedClients ?? 0 }}</div>
+              <div class="metric-label">Connected Clients</div>
+              <div class="metric-detail">
+                Hit Rate: {{ server.metrics.hitRate ?? 0 }}%
+              </div>
+              <div class="metric-detail" *ngIf="server.metrics.usedMemoryGb !== undefined">
+                💾 Memory: {{ server.metrics.usedMemoryGb | number:'1.1-2' }} GB
+              </div>
+            </div>
+
           </div>
-          <ng-template #mssqlLoading>
-            <p class="hint">Click para cargar métricas</p>
-          </ng-template>
         </div>
-      </div>
+      </ng-container>
 
+      <ng-template #noMetrics>
+        <div *ngIf="!error" style="color: #666; padding: 20px;">Cargando o sin métricas...</div>
+      </ng-template>
+
+      <!-- Tools Cards -->
       <div class="card card-datacheck">
         <div class="card-icon">✅</div>
         <div class="card-body">
           <h3>DataCheck</h3>
           <p>Validación de calidad de datos</p>
-          <ul class="feature-list">
-            <li>🔍 Detección de duplicados</li>
-            <li>📋 Campos faltantes</li>
-            <li>📊 Estadísticas numéricas</li>
-          </ul>
           <a routerLink="/datacheck" class="btn">Abrir DataCheck</a>
         </div>
       </div>
@@ -86,38 +106,8 @@ import { ApiService } from '../../services/api.service';
         <div class="card-icon">🤖</div>
         <div class="card-body">
           <h3>AI Analysis</h3>
-          <p>Recomendaciones con IA (Claude)</p>
-          <ul class="feature-list">
-            <li>💡 Análisis de rendimiento</li>
-            <li>⚡ Optimizaciones sugeridas</li>
-            <li>🛡️ Detección de problemas</li>
-          </ul>
+          <p>Recomendaciones con IA</p>
           <a routerLink="/analysis" class="btn btn-ai">Ejecutar Análisis</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick Info Panel -->
-    <div class="info-panels">
-      <div class="info-panel">
-        <h3>📌 Endpoints API Disponibles</h3>
-        <table class="api-table">
-          <thead><tr><th>Método</th><th>Ruta</th><th>Descripción</th></tr></thead>
-          <tbody>
-            <tr><td><span class="method get">GET</span></td><td>/health</td><td>Health check del servidor</td></tr>
-            <tr><td><span class="method get">GET</span></td><td>/metrics</td><td>Métricas PostgreSQL & MSSQL</td></tr>
-            <tr><td><span class="method post">POST</span></td><td>/datacheck</td><td>Chequeo de calidad de datos</td></tr>
-            <tr><td><span class="method post">POST</span></td><td>/analyze</td><td>Análisis AI completo</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="info-panel">
-        <h3>🏗️ Arquitectura del Proyecto</h3>
-        <div class="arch-grid">
-          <div class="arch-item"><strong>Frontend</strong><br>Angular 17 Standalone</div>
-          <div class="arch-item"><strong>Backend</strong><br>Express + TypeScript</div>
-          <div class="arch-item"><strong>DB Collectors</strong><br>PostgreSQL + MSSQL</div>
-          <div class="arch-item"><strong>AI Engine</strong><br>Anthropic Claude</div>
         </div>
       </div>
     </div>
@@ -142,8 +132,10 @@ import { ApiService } from '../../services/api.service';
       transition: transform 0.2s, box-shadow 0.2s; border-top: 4px solid #ddd;
     }
     .card:hover { transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,0.12); }
-    .card-pg { border-top-color: #336791; }
+    .card-postgres { border-top-color: #336791; }
     .card-mssql { border-top-color: #cc2927; }
+    .card-mongodb { border-top-color: #4db33d; }
+    .card-redis { border-top-color: #d82c20; }
     .card-datacheck { border-top-color: #28a745; }
     .card-ai { border-top-color: #7c3aed; }
 
@@ -156,12 +148,6 @@ import { ApiService } from '../../services/api.service';
     .metric-detail { margin-top: 8px; font-size: 13px; }
     .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
     .badge.active { background: #e8f5e9; color: #2e7d32; }
-    .badge.idle { background: #fff3e0; color: #e65100; margin-left: 4px; }
-
-    .hint { color: #aaa; font-style: italic; font-size: 13px; }
-
-    .feature-list { list-style: none; padding: 0; margin: 0 0 12px; font-size: 13px; }
-    .feature-list li { padding: 3px 0; }
 
     .btn {
       display: inline-block; padding: 8px 18px; border-radius: 8px;
@@ -172,27 +158,6 @@ import { ApiService } from '../../services/api.service';
     .btn-ai { background: #7c3aed; }
     .btn-ai:hover { background: #6d28d9; }
 
-    .info-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-    .info-panel {
-      background: #fff; border-radius: 14px; padding: 24px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    }
-    .info-panel h3 { margin: 0 0 16px; color: #1a1a2e; font-size: 1rem; }
-
-    .api-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .api-table th { background: #f0f4ff; padding: 8px 10px; text-align: left; font-weight: 600; }
-    .api-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }
-    .method { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #fff; }
-    .method.get { background: #28a745; }
-    .method.post { background: #007bff; }
-
-    .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .arch-item {
-      background: #f8f9ff; padding: 14px; border-radius: 8px; text-align: center;
-      font-size: 13px; border: 1px solid #e8ecf4;
-    }
-    .arch-item strong { color: #0f3460; display: block; margin-bottom: 4px; }
-
     .error-banner {
       color: #e94560; padding: 14px 20px; background: #ffe0e6;
       border-radius: 10px; border-left: 4px solid #e94560; margin-top: 16px;
@@ -200,12 +165,11 @@ import { ApiService } from '../../services/api.service';
 
     @media (max-width: 768px) {
       .cards { grid-template-columns: 1fr; }
-      .info-panels { grid-template-columns: 1fr; }
     }
   `],
 })
 export class DashboardComponent implements OnInit {
-  metrics: any = null;
+  metrics: ServerMetric[] = [];
   error: string | null = null;
   backendOnline = false;
   lastRefresh: Date | null = null;

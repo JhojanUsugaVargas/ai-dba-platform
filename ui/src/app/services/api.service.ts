@@ -2,27 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-export interface PostgresMetrics {
-  totalSessions?: number;
-  activeSessions?: number;
-  avgQuerySeconds?: number;
-  cacheHitRatio?: number;
-  dbSizeGb?: number;
-  [key: string]: any;
-}
-
-export interface MssqlMetrics {
-  totalSessions?: number;
-  activeSessions?: number;
-  cpuUsagePercent?: number;
-  memoryGb?: number;
-  topWait?: string;
-  [key: string]: any;
-}
-
-export interface Metrics {
-  postgres: PostgresMetrics;
-  mssql: MssqlMetrics;
+export interface ServerMetric {
+  serverId: string;
+  name: string;
+  type: 'postgres' | 'mssql' | 'mongodb' | 'redis';
+  metrics: any;
 }
 
 export interface DataCheckReport {
@@ -35,7 +19,7 @@ export interface DataCheckReport {
 
 export interface AnalysisResult {
   aiResult: string;
-  metrics: Metrics;
+  metrics: ServerMetric[];
   dataCheck: DataCheckReport;
 }
 
@@ -47,15 +31,19 @@ export class ApiService {
 
   constructor(private http: HttpClient) {}
 
-  getMetrics(): Observable<Metrics> {
-    return this.http.get<Metrics>(`${this.baseUrl}/metrics`);
+  login(username: string, password: string): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(`${this.baseUrl}/login`, { username, password });
+  }
+
+  getMetrics(): Observable<ServerMetric[]> {
+    return this.http.get<ServerMetric[]>(`${this.baseUrl}/metrics`);
   }
 
   postDataCheck(data: any[]): Observable<DataCheckReport> {
     return this.http.post<DataCheckReport>(`${this.baseUrl}/datacheck`, { data });
   }
 
-  postAnalyze(payload: { metrics?: Metrics; data?: any[] }): Observable<AnalysisResult> {
+  postAnalyze(payload: { metrics?: ServerMetric[]; data?: any[] }): Observable<AnalysisResult> {
     return this.http.post<AnalysisResult>(`${this.baseUrl}/analyze`, payload);
   }
 

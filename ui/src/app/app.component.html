@@ -1,4 +1,4 @@
-<div class="app-container">
+<div *ngIf="isLoggedIn(); else publicContent" class="app-container">
   <nav class="sidebar">
     <div class="logo">
       <h2>🗄️ AI DBA</h2>
@@ -10,9 +10,14 @@
       <li><a routerLink="/datacheck" routerLinkActive="active">✅ DataCheck</a></li>
       <li><a routerLink="/analysis" routerLinkActive="active">🤖 AI Analysis</a></li>
       <li><a routerLink="/chat" routerLinkActive="active">💬 SQL Assistant</a></li>
+      <li style="margin-top: auto; padding-top: 20px;"><a href="#" (click)="logout($event)">🚪 Logout</a></li>
     </ul>
   </nav>
   <main class="content">
     <router-outlet></router-outlet>
   </main>
 </div>
+
+<ng-template #publicContent>
+  <router-outlet></router-outlet>
+</ng-template>

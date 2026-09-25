@@ -1,0 +1,6 @@
+[
+  { "id": "1", "name": "Postgres Prod", "type": "postgres", "connectionString": "" },
+  { "id": "2", "name": "MSSQL DataWarehouse", "type": "mssql", "connectionString": "" },
+  { "id": "3", "name": "MongoDB Cluster", "type": "mongodb", "connectionString": "" },
+  { "id": "4", "name": "Redis Cache", "type": "redis", "connectionString": "" }
+]
