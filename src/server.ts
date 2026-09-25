@@ -66,11 +66,18 @@ app.post('/api/reports/pdf', async (req, res) => {
 });
 
 import { generateCMDBDocx } from './services/docxGenerator.js';
+import { generateCorporateDocx } from './services/templateGenerator.js';
 
 app.post('/api/reports/docx', async (req, res) => {
   try {
     const metrics = req.body;
-    const docxBuffer = await generateCMDBDocx(metrics);
+    let docxBuffer;
+    try {
+      docxBuffer = await generateCorporateDocx(metrics);
+    } catch (e: any) {
+      console.warn('Corporate template failed, falling back to basic docx:', e.message);
+      docxBuffer = await generateCMDBDocx(metrics);
+    }
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.send(docxBuffer);
   } catch (error) {
@@ -233,6 +240,18 @@ app.post('/analyze', async (req, res) => {
   } catch (err) {
     console.error('Analyze error:', err);
     res.status(500).json({ error: 'Failed to analyze' });
+  }
+});
+
+import { getHistory } from './services/db';
+
+app.get('/api/metrics/history/:serverId', async (req, res) => {
+  try {
+    const history = await getHistory(req.params.serverId);
+    res.json(history);
+  } catch (error) {
+    console.error('History fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
 

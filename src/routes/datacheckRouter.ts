@@ -5,6 +5,7 @@ import csvParser from 'csv-parser';
 import { Readable } from 'stream';
 import { Client } from 'pg';
 import sql from 'mssql';
+import { Parser } from 'json2csv';
 
 /**
  * POST /datacheck
@@ -96,5 +97,48 @@ datacheckRouter.post('/datacheck/table', async (req: Request, res: Response): Pr
   } catch (err) {
     console.error('DataCheck table error:', err);
     res.status(500).json({ error: 'DataCheck failed for table scan' });
+  }
+});
+
+datacheckRouter.post('/datacheck/cleanse', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const data = req.body?.data ?? [];
+    if (!Array.isArray(data)) {
+      res.status(400).json({ error: 'Data must be an array' });
+      return;
+    }
+
+    const cleansedData: any[] = [];
+    const seen = new Set<string>();
+
+    for (const row of data) {
+      if (!row || typeof row !== 'object') continue;
+
+      // Drop rows with null or undefined values
+      const hasNull = Object.values(row).some(v => v === null || v === undefined);
+      if (hasNull) continue;
+
+      // Drop duplicates (deep equality)
+      const key = JSON.stringify(row);
+      if (!seen.has(key)) {
+        seen.add(key);
+        cleansedData.push(row);
+      }
+    }
+
+    if (cleansedData.length === 0) {
+      res.status(400).json({ error: 'No data remaining after cleansing' });
+      return;
+    }
+
+    const parser = new Parser();
+    const csv = parser.parse(cleansedData);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="cleansed_data.csv"');
+    res.send(csv);
+  } catch (err) {
+    console.error('Cleanse error:', err);
+    res.status(500).json({ error: 'Cleansing failed' });
   }
 });

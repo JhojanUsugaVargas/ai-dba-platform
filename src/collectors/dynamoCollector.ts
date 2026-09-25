@@ -1,5 +1,6 @@
 import { DynamoDBClient, ListTablesCommand } from "@aws-sdk/client-dynamodb";
 import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
+import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
 
 export const collectDynamoMetrics = async (config: any) => {
   let awsConfig: any = {};
@@ -21,20 +22,35 @@ export const collectDynamoMetrics = async (config: any) => {
     return { activeTables: 12, provisionedRcu: 500, provisionedWcu: 500, advancedAudit: [] };
   }
 
+  let credentials: any = {
+    accessKeyId,
+    secretAccessKey
+  };
+
+  if (awsConfig.roleArn) {
+    const stsClient = new STSClient({ region, credentials });
+    const assumeRoleCommand = new AssumeRoleCommand({
+      RoleArn: awsConfig.roleArn,
+      RoleSessionName: 'DynamoMetricsSession'
+    });
+    const stsResponse = await stsClient.send(assumeRoleCommand);
+    if (stsResponse.Credentials) {
+      credentials = {
+        accessKeyId: stsResponse.Credentials.AccessKeyId!,
+        secretAccessKey: stsResponse.Credentials.SecretAccessKey!,
+        sessionToken: stsResponse.Credentials.SessionToken
+      };
+    }
+  }
+
   const client = new DynamoDBClient({
     region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey
-    }
+    credentials
   });
 
   const cwClient = new CloudWatchClient({
     region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey
-    }
+    credentials
   });
 
   try {

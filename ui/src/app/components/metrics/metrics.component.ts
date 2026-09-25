@@ -45,6 +45,7 @@ import { ApiService, ServerMetric } from '../../services/api.service';
                   <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'cache')">⚡ sp_BlitzCache</button>
                   <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'index')">⚡ sp_BlitzIndex</button>
                   <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'lock')">⚡ sp_BlitzLock</button>
+                  <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'querystore')">⚡ sp_BlitzQueryStore</button>
                   <button class="btn btn-action" style="border: none; text-align: left; width: 100%;" (click)="installBlitz(server)">⚙️ Install First Responder Kit</button>
                 </div>
               </div>
@@ -60,16 +61,17 @@ import { ApiService, ServerMetric } from '../../services/api.service';
             <table class="blitz-table">
               <thead>
                 <tr>
-                  <th>Priority</th>
-                  <th>Finding</th>
-                  <th>Details</th>
+                  <th *ngFor="let col of getBlitzKeys(server)">{{ col }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let item of blitzResults[server.serverId || server.name]">
-                  <td>{{ item.Priority }}</td>
-                  <td>{{ item.Finding }}</td>
-                  <td>{{ item.Details }}</td>
+                  <td *ngFor="let col of getBlitzKeys(server)">
+                    <ng-container *ngIf="isXml(item[col]); else textNode">
+                      <pre><code class="xml-format">{{ item[col] }}</code></pre>
+                    </ng-container>
+                    <ng-template #textNode>{{ item[col] }}</ng-template>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -266,6 +268,7 @@ import { ApiService, ServerMetric } from '../../services/api.service';
     .blitz-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .blitz-table th, .blitz-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
     .blitz-table th { background: #ffebee; color: #cc2927; position: sticky; top: 0; }
+    .xml-format { white-space: pre-wrap; word-break: break-all; font-family: monospace; background: #f4f4f4; padding: 4px; display: block; max-height: 200px; overflow-y: auto; }
   `]
 })
 export class MetricsComponent implements OnInit, OnDestroy {
@@ -411,5 +414,20 @@ export class MetricsComponent implements OnInit, OnDestroy {
       console.error('Error installing suite:', err);
       alert('Error installing suite: ' + (err.message || err.statusText));
     }
+  }
+
+  getBlitzKeys(server: ServerMetric): string[] {
+    const id = server.serverId || server.name;
+    const results = this.blitzResults[id];
+    if (results && results.length > 0) {
+      return Object.keys(results[0]);
+    }
+    return [];
+  }
+
+  isXml(value: any): boolean {
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    return trimmed.startsWith('<') && trimmed.endsWith('>') && trimmed.includes('</');
   }
 }

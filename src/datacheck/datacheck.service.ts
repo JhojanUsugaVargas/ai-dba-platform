@@ -10,11 +10,12 @@ export class DataCheckService {
    * Perform a basic data quality check on an array of objects.
    * Returns total records, duplicate count, missing field counts, and simple numeric stats.
    */
-  static async runCheck(data: any[]): Promise<{
+  static async runCheck(data: any[], regexRules?: Record<string, string>): Promise<{
     total: number;
     duplicates: number;
     missingFields: Record<string, number>;
     numericStats: Record<string, { min: number; max: number; avg: number }>; 
+    regexIssues?: Record<string, number>;
     issues: string[];
   }> {
     const total = data.length;
@@ -48,6 +49,34 @@ export class DataCheckService {
       issues.push(`Missing fields: ${msgs}`);
     }
 
+    // Regex rule validation
+    const regexIssues: Record<string, number> = {};
+    if (regexRules) {
+      for (const [key, pattern] of Object.entries(regexRules)) {
+        try {
+          const regex = new RegExp(pattern);
+          let invalidCount = 0;
+          for (const row of data) {
+            if (row[key] !== undefined && row[key] !== null) {
+              if (!regex.test(String(row[key]))) {
+                invalidCount++;
+              }
+            }
+          }
+          if (invalidCount > 0) regexIssues[key] = invalidCount;
+        } catch (e) {
+          issues.push(`Invalid regex pattern for "${key}"`);
+        }
+      }
+      
+      if (Object.keys(regexIssues).length > 0) {
+        const msgs = Object.entries(regexIssues)
+          .map(([k, v]) => `${v} record(s) failed regex for "${k}"`)
+          .join(', ');
+        issues.push(`Regex validation failures: ${msgs}`);
+      }
+    }
+
     // Simple numeric stats (min, max, average) for numeric columns
     const numericStats: Record<string, { min: number; max: number; avg: number }> = {};
     for (const key of allKeys) {
@@ -64,6 +93,6 @@ export class DataCheckService {
       issues.push('Numeric statistics computed for numeric fields');
     }
 
-    return { total, duplicates: duplicateCount, missingFields, numericStats, issues };
+    return { total, duplicates: duplicateCount, missingFields, numericStats, regexIssues, issues };
   }
 }
