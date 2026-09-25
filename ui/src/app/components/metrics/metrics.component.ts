@@ -1,11 +1,12 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ApiService, ServerMetric } from '../../services/api.service';
 
 @Component({
   selector: 'app-metrics',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="page-header">
       <h1>📈 Database Metrics</h1>
@@ -34,6 +35,47 @@ import { ApiService, ServerMetric } from '../../services/api.service';
             </ng-container>
           </span>
           <h2>{{ server.name }} <small>({{ server.type }})</small></h2>
+          
+          <div class="db-actions">
+            <button class="btn btn-action" (click)="downloadPdf(server)">📄 Exportar PDF</button>
+            <button class="btn btn-action" (click)="toggleEmailForm(server.serverId || server.name)">✉️ Enviar por Correo</button>
+          </div>
+        </div>
+        
+        <div class="email-form-card" *ngIf="showEmailForm[server.serverId || server.name]">
+          <h4>Enviar reporte de {{ server.name }}</h4>
+          <div class="form-group">
+            <label>Destinatario</label>
+            <input type="email" [(ngModel)]="emailData[server.serverId || server.name].to" class="input-field" placeholder="destinatario@correo.com">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>SMTP Host</label>
+              <input type="text" [(ngModel)]="emailData[server.serverId || server.name].host" class="input-field">
+            </div>
+            <div class="form-group">
+              <label>SMTP Port</label>
+              <input type="number" [(ngModel)]="emailData[server.serverId || server.name].port" class="input-field">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tu Correo</label>
+              <input type="email" [(ngModel)]="emailData[server.serverId || server.name].user" class="input-field" placeholder="tu-correo@gmail.com">
+            </div>
+            <div class="form-group">
+              <label>App Password</label>
+              <input type="password" [(ngModel)]="emailData[server.serverId || server.name].password" class="input-field" placeholder="****">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" (click)="sendEmail(server)" [disabled]="isSending[server.serverId || server.name]">
+              {{ isSending[server.serverId || server.name] ? '⏳ Enviando...' : '📤 Enviar' }}
+            </button>
+            <button class="btn btn-danger" (click)="toggleEmailForm(server.serverId || server.name)">Cancelar</button>
+          </div>
+          <div class="inline-alert success" *ngIf="emailSuccess[server.serverId || server.name]">✅ Correo enviado con éxito.</div>
+          <div class="inline-alert error" *ngIf="emailError[server.serverId || server.name]">⚠️ {{ emailError[server.serverId || server.name] }}</div>
         </div>
         
         <div class="gauge-grid">
@@ -148,7 +190,22 @@ import { ApiService, ServerMetric } from '../../services/api.service';
     .metrics-container { display: grid; grid-template-columns: 1fr; gap: 24px; }
 
     .db-section { background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-    .db-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #eee; }
+    .db-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #eee; flex-wrap: wrap; }
+    .db-actions { margin-left: auto; display: flex; gap: 8px; }
+    .btn-action { background: #f0f2f5; color: #333; border: 1px solid #ddd; padding: 6px 12px; font-size: 13px; }
+    .btn-action:hover { background: #e4e6e9; }
+
+    .email-form-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+    .email-form-card h4 { margin-top: 0; margin-bottom: 12px; color: #333; }
+    .form-group { margin-bottom: 12px; display: flex; flex-direction: column; flex: 1; }
+    .form-group label { font-size: 12px; font-weight: bold; color: #555; margin-bottom: 4px; }
+    .input-field { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; box-sizing: border-box; }
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .form-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .inline-alert { padding: 8px 12px; border-radius: 4px; margin-top: 12px; font-size: 13px; }
+    .inline-alert.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .inline-alert.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
     .db-header.postgres { border-bottom-color: #336791; }
     .db-header.mssql { border-bottom-color: #cc2927; }
     .db-header.mongodb { border-bottom-color: #4db33d; }
@@ -177,6 +234,12 @@ export class MetricsComponent implements OnInit, OnDestroy {
   error: string | null = null;
   autoRefresh = false;
   private intervalId: any = null;
+
+  showEmailForm: Record<string, boolean> = {};
+  emailData: Record<string, any> = {};
+  isSending: Record<string, boolean> = {};
+  emailSuccess: Record<string, boolean> = {};
+  emailError: Record<string, string> = {};
 
   constructor(private api: ApiService) {}
 
@@ -208,5 +271,58 @@ export class MetricsComponent implements OnInit, OnDestroy {
   private stopAutoRefresh() {
     if (this.intervalId) { clearInterval(this.intervalId); this.intervalId = null; }
     this.autoRefresh = false;
+  }
+
+  downloadPdf(server: ServerMetric) {
+    this.api.downloadPdf(server).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `report_${server.name}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => console.error('Error downloading PDF', err)
+    });
+  }
+
+  toggleEmailForm(id: string) {
+    this.showEmailForm[id] = !this.showEmailForm[id];
+    if (this.showEmailForm[id] && !this.emailData[id]) {
+      this.emailData[id] = {
+        to: '',
+        host: 'smtp.gmail.com',
+        port: 465,
+        user: '',
+        password: ''
+      };
+    }
+    this.emailSuccess[id] = false;
+    this.emailError[id] = '';
+  }
+
+  sendEmail(server: ServerMetric) {
+    const id = server.serverId || server.name;
+    this.isSending[id] = true;
+    this.emailSuccess[id] = false;
+    this.emailError[id] = '';
+
+    const payload = {
+      server,
+      emailSettings: this.emailData[id]
+    };
+
+    this.api.sendEmail(payload).subscribe({
+      next: () => {
+        this.isSending[id] = false;
+        this.emailSuccess[id] = true;
+        setTimeout(() => this.showEmailForm[id] = false, 3000);
+      },
+      error: (err) => {
+        this.isSending[id] = false;
+        this.emailError[id] = err.message || 'Error al enviar correo';
+      }
+    });
   }
 }

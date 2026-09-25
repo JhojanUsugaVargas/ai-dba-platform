@@ -16,6 +16,8 @@ import { analyzeReport } from './ai/analyze';
 import { askSqlAssistant } from './ai/chat';
 import { datacheckRouter } from './routes/datacheckRouter';
 import { verifyToken, loginHandler } from './auth/auth';
+import { generateCMDBPdf } from './services/pdfGenerator.js';
+import { sendReportEmail } from './services/mailer.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -49,6 +51,31 @@ app.post('/api/chat', handleChat);
 // Protect remaining routes
 app.use(verifyToken);
 app.use(datacheckRouter);
+
+app.post('/api/reports/pdf', async (req, res) => {
+  try {
+    const metrics = req.body;
+    const pdfBuffer = await generateCMDBPdf(metrics);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+});
+
+app.post('/api/reports/email', async (req, res) => {
+  try {
+    const { metrics, smtp, recipient } = req.body;
+    const serverName = metrics?.name || 'Unknown_Server';
+    const pdfBuffer = await generateCMDBPdf(metrics);
+    await sendReportEmail(smtp, recipient, pdfBuffer, serverName);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Email sending error:', error);
+    res.status(500).json({ error: 'Failed to send email' });
+  }
+});
 
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);

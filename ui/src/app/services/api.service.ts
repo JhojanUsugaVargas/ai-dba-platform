@@ -65,4 +65,12 @@ export class ApiService {
   deleteServer(id: string): Observable<any> {
     return this.http.delete<any>(`${this.baseUrl}/servers/${id}`);
   }
+
+  downloadPdf(serverMetric: ServerMetric): Observable<Blob> {
+    return this.http.post(`${this.baseUrl}/reports/pdf`, serverMetric, { responseType: 'blob' });
+  }
+
+  sendEmail(payload: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/reports/email`, payload);
+  }
 }
