@@ -37,8 +37,31 @@ import { ApiService, ServerMetric } from '../../services/api.service';
           <h2>{{ server.name }} <small>({{ server.type }})</small></h2>
           
           <div class="db-actions">
+            <button *ngIf="server.type === 'mssql'" class="btn btn-action" (click)="runBlitz(server)">⚡ Run sp_Blitz</button>
             <button class="btn btn-action" (click)="downloadPdf(server)">📄 Exportar PDF</button>
             <button class="btn btn-action" (click)="toggleEmailForm(server.serverId || server.name)">✉️ Enviar por Correo</button>
+          </div>
+        </div>
+
+        <div *ngIf="blitzResults[server.serverId || server.name]" class="blitz-results">
+          <h4>⚡ Resultados de sp_Blitz</h4>
+          <div class="blitz-table-wrapper">
+            <table class="blitz-table">
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Finding</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of blitzResults[server.serverId || server.name]">
+                  <td>{{ item.Priority }}</td>
+                  <td>{{ item.Finding }}</td>
+                  <td>{{ item.Details }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
         
@@ -226,6 +249,12 @@ import { ApiService, ServerMetric } from '../../services/api.service';
     .gauge-fill.mongodb { background: #4db33d; }
     .gauge-fill.redis { background: #d82c20; }
     .gauge-detail { margin-top: 8px; font-size: 13px; color: #666; }
+    .blitz-results { margin-bottom: 20px; background: #fff8f8; border: 1px solid #f5c6cb; border-radius: 8px; padding: 16px; }
+    .blitz-results h4 { margin-top: 0; color: #cc2927; }
+    .blitz-table-wrapper { overflow-x: auto; max-height: 300px; }
+    .blitz-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .blitz-table th, .blitz-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    .blitz-table th { background: #ffebee; color: #cc2927; position: sticky; top: 0; }
   `]
 })
 export class MetricsComponent implements OnInit, OnDestroy {
@@ -240,6 +269,8 @@ export class MetricsComponent implements OnInit, OnDestroy {
   isSending: Record<string, boolean> = {};
   emailSuccess: Record<string, boolean> = {};
   emailError: Record<string, string> = {};
+
+  blitzResults: Record<string, any[]> = {};
 
   constructor(private api: ApiService) {}
 
@@ -322,6 +353,20 @@ export class MetricsComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.isSending[id] = false;
         this.emailError[id] = err.message || 'Error al enviar correo';
+      }
+    });
+  }
+
+  runBlitz(server: ServerMetric) {
+    const id = server.serverId || server.name;
+    this.blitzResults[id] = null as any; // clear previous
+    this.api.runBlitz({ serverId: id }).subscribe({
+      next: (res) => {
+        this.blitzResults[id] = res.results || [];
+      },
+      error: (err) => {
+        console.error('Error running sp_Blitz:', err);
+        alert('Error running sp_Blitz: ' + (err.message || err.statusText));
       }
     });
   }

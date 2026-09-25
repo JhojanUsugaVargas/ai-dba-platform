@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService, ServerMetric } from '../../services/api.service';
+import Chart from 'chart.js/auto';
 
 @Component({
   selector: 'app-dashboard',
@@ -124,6 +125,12 @@ import { ApiService, ServerMetric } from '../../services/api.service';
       </div>
     </div>
 
+    <!-- Chart Canvas -->
+    <div class="chart-container" style="background: #fff; padding: 20px; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 24px;">
+      <h3 style="margin-top: 0;">Histórico CPU MSSQL</h3>
+      <canvas #cpuChart></canvas>
+    </div>
+
     <div *ngIf="error" class="error-banner">⚠️ {{ error }}</div>
   `,
   styles: [`
@@ -181,16 +188,60 @@ import { ApiService, ServerMetric } from '../../services/api.service';
     }
   `],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   metrics: ServerMetric[] = [];
   error: string | null = null;
   backendOnline = false;
   lastRefresh: Date | null = null;
+  private intervalId: any;
+
+  @ViewChild('cpuChart') cpuChartRef!: ElementRef;
+  private chart: Chart | null = null;
+  private history: { time: string; cpu: number }[] = [];
 
   constructor(private api: ApiService) {}
 
   ngOnInit() {
     this.loadMetrics();
+    // Poll every 10 seconds
+    this.intervalId = setInterval(() => this.loadMetrics(), 10000);
+  }
+
+  ngAfterViewInit() {
+    this.initChart();
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+    if (this.chart) {
+      this.chart.destroy();
+    }
+  }
+
+  initChart() {
+    if (!this.cpuChartRef) return;
+    this.chart = new Chart(this.cpuChartRef.nativeElement, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'MSSQL CPU Usage (%)',
+          data: [],
+          borderColor: '#cc2927',
+          backgroundColor: 'rgba(204, 41, 39, 0.2)',
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, max: 100 }
+        }
+      }
+    });
   }
 
   loadMetrics() {
@@ -200,11 +251,29 @@ export class DashboardComponent implements OnInit {
         this.metrics = data;
         this.backendOnline = true;
         this.lastRefresh = new Date();
+        this.updateChartData();
       },
       error: (err) => {
         this.error = 'No se pudieron cargar las métricas: ' + (err.message || err.statusText);
         this.backendOnline = false;
       },
     });
+  }
+
+  updateChartData() {
+    const mssqlServer = this.metrics.find(s => s.type === 'mssql');
+    const cpu = mssqlServer?.metrics?.cpuUsagePercent ?? 0;
+    const time = new Date().toLocaleTimeString();
+
+    this.history.push({ time, cpu });
+    if (this.history.length > 20) {
+      this.history.shift(); // keep last 20 entries
+    }
+
+    if (this.chart) {
+      this.chart.data.labels = this.history.map(h => h.time);
+      this.chart.data.datasets[0].data = this.history.map(h => h.cpu);
+      this.chart.update();
+    }
   }
 }

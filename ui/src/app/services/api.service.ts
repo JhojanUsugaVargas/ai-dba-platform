@@ -73,4 +73,8 @@ export class ApiService {
   sendEmail(payload: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/reports/email`, payload);
   }
+
+  runBlitz(payload: { connectionString?: string, serverId?: string }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/servers/blitz`, payload);
+  }
 }

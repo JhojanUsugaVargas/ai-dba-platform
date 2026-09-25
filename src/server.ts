@@ -18,6 +18,7 @@ import { datacheckRouter } from './routes/datacheckRouter';
 import { verifyToken, loginHandler } from './auth/auth';
 import { generateCMDBPdf } from './services/pdfGenerator.js';
 import { sendReportEmail } from './services/mailer.js';
+import { executeSpBlitz } from './services/blitzRunner';
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -61,6 +62,20 @@ app.post('/api/reports/pdf', async (req, res) => {
   } catch (error) {
     console.error('PDF generation error:', error);
     res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+});
+
+import { generateCMDBDocx } from './services/docxGenerator.js';
+
+app.post('/api/reports/docx', async (req, res) => {
+  try {
+    const metrics = req.body;
+    const docxBuffer = await generateCMDBDocx(metrics);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.send(docxBuffer);
+  } catch (error) {
+    console.error('DOCX generation error:', error);
+    res.status(500).json({ error: 'Failed to generate DOCX' });
   }
 });
 
@@ -119,6 +134,28 @@ app.post('/api/servers', (req, res) => {
     res.json(newServer);
   } catch (error) {
     res.status(500).json({ error: 'Failed to add server' });
+  }
+});
+
+// POST /api/servers/blitz
+app.post('/api/servers/blitz', async (req, res) => {
+  try {
+    let connectionString = req.body.connectionString || req.body.credentials;
+    if (!connectionString && req.body.serverId) {
+      const data = fs.readFileSync(SERVERS_FILE, 'utf-8');
+      const servers = JSON.parse(data);
+      const server = servers.find((s: any) => s.id === req.body.serverId);
+      if (server) {
+        connectionString = server.connectionString;
+      }
+    }
+    if (!connectionString) {
+      return res.status(400).json({ error: 'connectionString or serverId is required' });
+    }
+    const blitzResults = await executeSpBlitz(connectionString);
+    res.json({ results: blitzResults });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
