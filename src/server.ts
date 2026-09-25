@@ -7,9 +7,33 @@
 import express from 'express';
 import { collectPostgresMetrics } from './collectors/postgresCollector';
 import { collectMssqlMetrics } from './collectors/mssqlCollector';
+import { DataCheckService } from './datacheck/datacheck.service';
+import { analyzeReport } from './ai/analyze';
+import { datacheckRouter } from './routes/datacheckRouter';
+
+// POST /analyze – combine metrics and optional data‑quality check, then call Anthropic
+app.post('/analyze', async (req, res) => {
+  try {
+    const [pgMetrics, mssqlMetrics] = await Promise.all([
+      collectPostgresMetrics(),
+      collectMssqlMetrics(),
+    ]);
+    const metrics = { postgres: pgMetrics, mssql: mssqlMetrics };
+    const data = req.body?.data ?? [];
+    const dataCheck = await DataCheckService.runCheck(data);
+    const aiResult = await analyzeReport({ metrics, dataCheck });
+    res.json({ aiResult, metrics, dataCheck });
+  } catch (err) {
+    console.error('Analyze error:', err);
+    res.status(500).json({ error: 'Failed to analyze' });
+  }
+});
+
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
+app.use(express.json());
+app.use(datacheckRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

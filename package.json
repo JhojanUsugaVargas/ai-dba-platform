@@ -17,7 +17,8 @@
   "dependencies": {
     "express": "^4.19.2",
     "pg": "^8.23.0",
-    "mssql": "^10.0.2"
+    "mssql": "^10.0.2",
+    "@anthropic-ai/sdk": "^0.12.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.12.1",
