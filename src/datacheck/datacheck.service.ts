@@ -7,24 +7,63 @@
  */
 export class DataCheckService {
   /**
-   * Perform a mock data quality check on a given dataset.
-   * @param data any[] – an array of records (objects) to be inspected.
-   * @returns a report object with counts and a list of dummy issues.
+   * Perform a basic data quality check on an array of objects.
+   * Returns total records, duplicate count, missing field counts, and simple numeric stats.
    */
-  static async runCheck(data: any[]): Promise<{ total: number; issues: string[] }> {
-    // Placeholder logic – in the real world this would be the rich
-    // functionality from the DataCheck‑web repository.
+  static async runCheck(data: any[]): Promise<{
+    total: number;
+    duplicates: number;
+    missingFields: Record<string, number>;
+    numericStats: Record<string, { min: number; max: number; avg: number }>; 
+    issues: string[];
+  }> {
     const total = data.length;
     const issues: string[] = [];
-    if (total === 0) {
-      issues.push('Dataset is empty');
-    } else {
-      // Example dummy rule: flag records missing an "id" field.
-      const missingId = data.filter((r) => r.id == null).length;
-      if (missingId > 0) {
-        issues.push(`${missingId} record(s) missing the required "id" field`);
+
+    // Detect duplicate records (deep equality via JSON stringification)
+    const seen = new Set<string>();
+    let duplicateCount = 0;
+    for (const row of data) {
+      const key = JSON.stringify(row);
+      if (seen.has(key)) duplicateCount++;
+      else seen.add(key);
+    }
+    if (duplicateCount > 0) issues.push(`${duplicateCount} duplicate record(s) found`);
+
+    // Missing field analysis
+    const missingFields: Record<string, number> = {};
+    const allKeys = new Set<string>();
+    data.forEach((row) => Object.keys(row).forEach((k) => allKeys.add(k)));
+    for (const key of allKeys) {
+      let missing = 0;
+      for (const row of data) {
+        if (row[key] === undefined || row[key] === null) missing++;
+      }
+      if (missing > 0) missingFields[key] = missing;
+    }
+    if (Object.keys(missingFields).length > 0) {
+      const msgs = Object.entries(missingFields)
+        .map(([k, v]) => `${v} record(s) missing "${k}"`)
+        .join(', ');
+      issues.push(`Missing fields: ${msgs}`);
+    }
+
+    // Simple numeric stats (min, max, average) for numeric columns
+    const numericStats: Record<string, { min: number; max: number; avg: number }> = {};
+    for (const key of allKeys) {
+      const values = data.map((r) => r[key]).filter((v) => typeof v === 'number');
+      if (values.length > 0) {
+        const sum = values.reduce((a, b) => a + b, 0);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const avg = sum / values.length;
+        numericStats[key] = { min, max, avg };
       }
     }
-    return { total, issues };
+    if (Object.keys(numericStats).length > 0) {
+      issues.push('Numeric statistics computed for numeric fields');
+    }
+
+    return { total, duplicates: duplicateCount, missingFields, numericStats, issues };
   }
 }
