@@ -17,12 +17,37 @@ export async function collectMssqlMetrics(connectionString: string): Promise<any
     };
   }
 
-  const config = {
+  let parsedConfig: any = null;
+  try {
+    parsedConfig = JSON.parse(connectionString);
+  } catch {
+    // Not JSON, assume standard connection string
+  }
+
+  const config: any = parsedConfig ? {
+    ...parsedConfig,
+    options: {
+      encrypt: parsedConfig.options?.encrypt ?? true,
+      ...parsedConfig.options
+    }
+  } : {
     connectionString: connectionString,
     options: {
       encrypt: true, // for Azure; adjust as needed
     },
   };
+
+  // Support Windows Auth with tedious by setting domain if provided
+  if (parsedConfig?.domain || parsedConfig?.integratedSecurity) {
+    config.authentication = {
+      type: 'ntlm',
+      options: {
+        domain: parsedConfig.domain || '',
+        userName: parsedConfig.user || parsedConfig.userName,
+        password: parsedConfig.password
+      }
+    };
+  }
 
   try {
     const pool = await sql.connect(config);

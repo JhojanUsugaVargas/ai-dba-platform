@@ -8,6 +8,7 @@ import { DatacheckComponent } from './components/datacheck/datacheck.component';
 import { AnalysisComponent } from './components/analysis/analysis.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { LoginComponent } from './components/login/login.component';
+import { SettingsComponent } from './components/settings/settings.component';
 import { authGuard } from './guards/auth.guard';
 import { authInterceptor } from './interceptors/auth.interceptor';
 
@@ -18,6 +19,7 @@ const routes: Routes = [
   { path: 'datacheck', component: DatacheckComponent, canActivate: [authGuard] },
   { path: 'analysis', component: AnalysisComponent, canActivate: [authGuard] },
   { path: 'chat', component: ChatComponent, canActivate: [authGuard] },
+  { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '' },
 ];
 

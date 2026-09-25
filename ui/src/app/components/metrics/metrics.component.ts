@@ -30,6 +30,7 @@ import { ApiService, ServerMetric } from '../../services/api.service';
               <span *ngSwitchCase="'mssql'">🔷</span>
               <span *ngSwitchCase="'mongodb'">🍃</span>
               <span *ngSwitchCase="'redis'">⚡</span>
+              <span *ngSwitchCase="'dynamodb'">☁️</span>
             </ng-container>
           </span>
           <h2>{{ server.name }} <small>({{ server.type }})</small></h2>
@@ -108,6 +109,22 @@ import { ApiService, ServerMetric } from '../../services/api.service';
               <div class="gauge-label">Used Memory</div>
             </div>
           </ng-container>
+
+          <!-- DynamoDB -->
+          <ng-container *ngIf="server.type === 'dynamodb'">
+            <div class="gauge-card">
+              <div class="gauge-value">{{ server.metrics.activeTables ?? '—' }}</div>
+              <div class="gauge-label">Active Tables</div>
+            </div>
+            <div class="gauge-card">
+              <div class="gauge-value">{{ server.metrics.provisionedRcu ?? '—' }}</div>
+              <div class="gauge-label">Provisioned RCU</div>
+            </div>
+            <div class="gauge-card">
+              <div class="gauge-value">{{ server.metrics.provisionedWcu ?? '—' }}</div>
+              <div class="gauge-label">Provisioned WCU</div>
+            </div>
+          </ng-container>
         </div>
       </div>
     </div>
@@ -136,6 +153,7 @@ import { ApiService, ServerMetric } from '../../services/api.service';
     .db-header.mssql { border-bottom-color: #cc2927; }
     .db-header.mongodb { border-bottom-color: #4db33d; }
     .db-header.redis { border-bottom-color: #d82c20; }
+    .db-header.dynamodb { border-bottom-color: #f58536; }
     .db-icon { font-size: 2rem; }
     .db-header h2 { margin: 0; color: #1a1a2e; display: flex; align-items: center; gap: 8px; }
     .db-header h2 small { font-size: 14px; color: #888; font-weight: normal; }

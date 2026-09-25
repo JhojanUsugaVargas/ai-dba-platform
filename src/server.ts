@@ -10,6 +10,7 @@ import { collectPostgresMetrics } from './collectors/postgresCollector';
 import { collectMssqlMetrics } from './collectors/mssqlCollector';
 import { collectMongoMetrics } from './collectors/mongoCollector';
 import { collectRedisMetrics } from './collectors/redisCollector';
+import { collectDynamoMetrics } from './collectors/dynamoCollector';
 import { DataCheckService } from './datacheck/datacheck.service';
 import { analyzeReport } from './ai/analyze';
 import { askSqlAssistant } from './ai/chat';
@@ -31,10 +32,27 @@ app.get('/health', (_req, res) => {
 app.post('/api/login', loginHandler);
 app.post('/login', loginHandler); // Provide both just in case
 
+// POST /chat & POST /api/chat – answer SQL errors or questions using Gemini
+const handleChat = async (req: express.Request, res: express.Response) => {
+  try {
+    const question = req.body?.question || req.body?.message || '';
+    const answer = await askSqlAssistant(question);
+    res.json({ answer });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to chat' });
+  }
+};
+
+app.post('/chat', handleChat);
+app.post('/api/chat', handleChat);
+
 // Protect remaining routes
 app.use(verifyToken);
 app.use(datacheckRouter);
 
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const SERVERS_FILE = path.join(__dirname, 'config', 'servers.json');
 
 app.get('/servers', (req, res) => {
@@ -43,6 +61,50 @@ app.get('/servers', (req, res) => {
     res.json(JSON.parse(data));
   } catch (error) {
     res.status(500).json({ error: 'Failed to read servers.json' });
+  }
+});
+
+// POST /api/servers/test
+app.post('/api/servers/test', async (req, res) => {
+  try {
+    const type = req.body.type;
+    const connectionString = req.body.connectionString || req.body.credentials;
+    if (type === 'postgres') await collectPostgresMetrics(connectionString);
+    else if (type === 'mssql') await collectMssqlMetrics(connectionString);
+    else if (type === 'mongodb') await collectMongoMetrics(connectionString);
+    else if (type === 'redis') await collectRedisMetrics(connectionString);
+    else if (type === 'dynamodb') await collectDynamoMetrics(connectionString);
+    else throw new Error('Unknown server type');
+    res.json({ success: true, message: 'Connection successful' });
+  } catch (err: any) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/servers
+app.post('/api/servers', (req, res) => {
+  try {
+    const data = fs.readFileSync(SERVERS_FILE, 'utf-8');
+    const servers = JSON.parse(data);
+    const newServer = { id: Date.now().toString(), ...req.body };
+    servers.push(newServer);
+    fs.writeFileSync(SERVERS_FILE, JSON.stringify(servers, null, 2));
+    res.json(newServer);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add server' });
+  }
+});
+
+// DELETE /api/servers/:id
+app.delete('/api/servers/:id', (req, res) => {
+  try {
+    const data = fs.readFileSync(SERVERS_FILE, 'utf-8');
+    let servers = JSON.parse(data);
+    servers = servers.filter((s: any) => s.id !== req.params.id);
+    fs.writeFileSync(SERVERS_FILE, JSON.stringify(servers, null, 2));
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete server' });
   }
 });
 
@@ -62,6 +124,8 @@ app.get('/metrics', async (_req, res) => {
         metrics = await collectMongoMetrics(s.connectionString);
       } else if (s.type === 'redis') {
         metrics = await collectRedisMetrics(s.connectionString);
+      } else if (s.type === 'dynamodb') {
+        metrics = await collectDynamoMetrics(s.connectionString);
       }
       return { serverId: s.id, name: s.name, type: s.type, metrics };
     });
@@ -90,6 +154,8 @@ app.post('/analyze', async (req, res) => {
         metrics = await collectMongoMetrics(s.connectionString);
       } else if (s.type === 'redis') {
         metrics = await collectRedisMetrics(s.connectionString);
+      } else if (s.type === 'dynamodb') {
+        metrics = await collectDynamoMetrics(s.connectionString);
       }
       return { serverId: s.id, name: s.name, type: s.type, metrics };
     });
@@ -105,20 +171,6 @@ app.post('/analyze', async (req, res) => {
     res.status(500).json({ error: 'Failed to analyze' });
   }
 });
-
-// POST /chat & POST /api/chat – answer SQL errors or questions using Gemini
-const handleChat = async (req: express.Request, res: express.Response) => {
-  try {
-    const question = req.body?.question || '';
-    const answer = await askSqlAssistant(question);
-    res.json({ answer });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to chat' });
-  }
-};
-
-app.post('/chat', handleChat);
-app.post('/api/chat', handleChat);
 
 app.listen(PORT, () => {
   console.log(`AI DBA Monitor listening on http://localhost:${PORT}`);

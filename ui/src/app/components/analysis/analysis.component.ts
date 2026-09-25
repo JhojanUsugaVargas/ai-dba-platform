@@ -41,28 +41,15 @@ import { ApiService, AnalysisResult } from '../../services/api.service';
 
       <!-- Metrics Summary -->
       <div class="result-grid">
-        <div class="result-section">
+        <div class="result-section" *ngFor="let server of result.metrics">
           <div class="section-header">
-            <span class="section-icon">🐘</span>
-            <h2>PostgreSQL</h2>
+            <span class="section-icon">{{ server.type === 'postgres' ? '🐘' : server.type === 'mssql' ? '🔷' : server.type === 'mongodb' ? '🍃' : '🔴' }}</span>
+            <h2>{{ server.name }}</h2>
           </div>
           <div class="metric-list">
-            <div class="metric-row" *ngFor="let key of objectKeys(result.metrics?.postgres || {})">
+            <div class="metric-row" *ngFor="let key of objectKeys(server.metrics || {})">
               <span class="metric-key">{{ key }}</span>
-              <span class="metric-val">{{ result.metrics.postgres[key] }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="result-section">
-          <div class="section-header">
-            <span class="section-icon">🔷</span>
-            <h2>MSSQL Server</h2>
-          </div>
-          <div class="metric-list">
-            <div class="metric-row" *ngFor="let key of objectKeys(result.metrics?.mssql || {})">
-              <span class="metric-key">{{ key }}</span>
-              <span class="metric-val">{{ result.metrics.mssql[key] }}</span>
+              <span class="metric-val">{{ server.metrics[key] }}</span>
             </div>
           </div>
         </div>

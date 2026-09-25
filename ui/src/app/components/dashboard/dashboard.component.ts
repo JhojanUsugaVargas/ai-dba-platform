@@ -35,6 +35,7 @@ import { ApiService, ServerMetric } from '../../services/api.service';
               <span *ngSwitchCase="'mssql'">🔷</span>
               <span *ngSwitchCase="'mongodb'">🍃</span>
               <span *ngSwitchCase="'redis'">⚡</span>
+              <span *ngSwitchCase="'dynamodb'">☁️</span>
             </ng-container>
           </div>
           <div class="card-body">
@@ -81,6 +82,17 @@ import { ApiService, ServerMetric } from '../../services/api.service';
               </div>
               <div class="metric-detail" *ngIf="server.metrics.usedMemoryGb !== undefined">
                 💾 Memory: {{ server.metrics.usedMemoryGb | number:'1.1-2' }} GB
+              </div>
+            </div>
+
+            <div *ngIf="server.type === 'dynamodb'">
+              <div class="metric-value">{{ server.metrics.activeTables ?? 0 }}</div>
+              <div class="metric-label">Active Tables</div>
+              <div class="metric-detail">
+                RCU: {{ server.metrics.provisionedRcu ?? 0 }}
+              </div>
+              <div class="metric-detail">
+                WCU: {{ server.metrics.provisionedWcu ?? 0 }}
               </div>
             </div>
 
@@ -136,6 +148,7 @@ import { ApiService, ServerMetric } from '../../services/api.service';
     .card-mssql { border-top-color: #cc2927; }
     .card-mongodb { border-top-color: #4db33d; }
     .card-redis { border-top-color: #d82c20; }
+    .card-dynamodb { border-top-color: #f58536; }
     .card-datacheck { border-top-color: #28a745; }
     .card-ai { border-top-color: #7c3aed; }
 

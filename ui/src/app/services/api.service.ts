@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 export interface ServerMetric {
   serverId: string;
   name: string;
-  type: 'postgres' | 'mssql' | 'mongodb' | 'redis';
+  type: 'postgres' | 'mssql' | 'mongodb' | 'redis' | 'dynamodb';
   metrics: any;
 }
 
@@ -49,5 +49,20 @@ export class ApiService {
 
   postChat(question: string): Observable<{ answer: string }> {
     return this.http.post<{ answer: string }>(`${this.baseUrl}/chat`, { question, message: question });
+  }
+  getServers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/servers`);
+  }
+
+  testServer(data: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/servers/test`, data);
+  }
+
+  addServer(data: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/servers`, data);
+  }
+
+  deleteServer(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.baseUrl}/servers/${id}`);
   }
 }
