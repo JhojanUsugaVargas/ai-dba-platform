@@ -37,7 +37,18 @@ import { ApiService, ServerMetric } from '../../services/api.service';
           <h2>{{ server.name }} <small>({{ server.type }})</small></h2>
           
           <div class="db-actions">
-            <button *ngIf="server.type === 'mssql'" class="btn btn-action" (click)="runBlitz(server)">⚡ Run sp_Blitz</button>
+            <ng-container *ngIf="server.type === 'mssql'">
+              <div style="display: inline-block; position: relative;">
+                <button class="btn btn-action" (click)="toggleBlitzMenu(server)">⚡ First Responder Kit ▼</button>
+                <div *ngIf="showBlitzMenu[server.serverId || server.name]" style="position: absolute; top: 100%; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; min-width: 200px; display: flex; flex-direction: column;">
+                  <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'blitz')">⚡ sp_Blitz</button>
+                  <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'cache')">⚡ sp_BlitzCache</button>
+                  <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'index')">⚡ sp_BlitzIndex</button>
+                  <button class="btn btn-action" style="border: none; border-bottom: 1px solid #eee; text-align: left; width: 100%;" (click)="runBlitzAction(server, 'lock')">⚡ sp_BlitzLock</button>
+                  <button class="btn btn-action" style="border: none; text-align: left; width: 100%;" (click)="installBlitz(server)">⚙️ Install First Responder Kit</button>
+                </div>
+              </div>
+            </ng-container>
             <button class="btn btn-action" (click)="downloadPdf(server)">📄 Exportar PDF</button>
             <button class="btn btn-action" (click)="toggleEmailForm(server.serverId || server.name)">✉️ Enviar por Correo</button>
           </div>
@@ -357,17 +368,48 @@ export class MetricsComponent implements OnInit, OnDestroy {
     });
   }
 
-  runBlitz(server: ServerMetric) {
+  showBlitzMenu: Record<string, boolean> = {};
+
+  toggleBlitzMenu(server: ServerMetric) {
     const id = server.serverId || server.name;
-    this.blitzResults[id] = null as any; // clear previous
-    this.api.runBlitz({ serverId: id }).subscribe({
-      next: (res) => {
-        this.blitzResults[id] = res.results || [];
-      },
-      error: (err) => {
-        console.error('Error running sp_Blitz:', err);
-        alert('Error running sp_Blitz: ' + (err.message || err.statusText));
-      }
-    });
+    this.showBlitzMenu[id] = !this.showBlitzMenu[id];
+  }
+
+  async runBlitzAction(server: ServerMetric, action: string) {
+    const id = server.serverId || server.name;
+    this.showBlitzMenu[id] = false;
+    this.blitzResults[id] = null as any; 
+    try {
+      const endpoint = action === 'blitz' ? `/api/servers/blitz` : `/api/servers/blitz/${action}`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverId: id })
+      });
+      if (!res.ok) throw new Error('Error running ' + action);
+      const data = await res.json();
+      this.blitzResults[id] = data.results || [];
+    } catch (err: any) {
+      console.error(`Error running sp_Blitz${action}:`, err);
+      alert(`Error running sp_Blitz${action}: ` + (err.message || err.statusText));
+    }
+  }
+
+  async installBlitz(server: ServerMetric) {
+    const id = server.serverId || server.name;
+    this.showBlitzMenu[id] = false;
+    try {
+      const res = await fetch(`/api/servers/blitz/install`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverId: id })
+      });
+      if (!res.ok) throw new Error('Error installing Blitz suite');
+      const data = await res.json();
+      alert(data.message || 'Installed successfully');
+    } catch (err: any) {
+      console.error('Error installing suite:', err);
+      alert('Error installing suite: ' + (err.message || err.statusText));
+    }
   }
 }

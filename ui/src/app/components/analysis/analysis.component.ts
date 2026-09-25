@@ -37,6 +37,14 @@ import { ApiService, AnalysisResult } from '../../services/api.service';
           <h2>Recomendaciones AI</h2>
         </div>
         <div class="ai-response">{{ result.aiResult }}</div>
+        <div *ngIf="extractedSql" class="autofix-section">
+          <button (click)="applyFix(extractedSql)" [disabled]="isFixing" class="btn btn-ai btn-xl" style="margin-top: 15px;">
+            ⚡ Aplicar Solución de IA
+          </button>
+          <div *ngIf="fixMessage" style="margin-top: 10px; font-weight: bold;" [ngStyle]="{'color': fixSuccess ? '#2e7d32' : '#d32f2f'}">
+            {{ fixMessage }}
+          </div>
+        </div>
       </div>
 
       <!-- Metrics Summary -->
@@ -148,7 +156,17 @@ export class AnalysisComponent {
   error: string | null = null;
   objectKeys = Object.keys;
 
+  isFixing = false;
+  fixMessage = '';
+  fixSuccess = false;
+
   constructor(private api: ApiService) {}
+
+  get extractedSql(): string | null {
+    if (!this.result?.aiResult) return null;
+    const match = this.result.aiResult.match(/```sql\s*([\s\S]*?)\s*```/i);
+    return match ? match[1].trim() : null;
+  }
 
   runAnalysis() {
     this.loading = true;
@@ -157,6 +175,27 @@ export class AnalysisComponent {
     this.api.postAnalyze({}).subscribe({
       next: (res) => { this.result = res; this.loading = false; },
       error: (err) => { this.error = 'El análisis falló: ' + (err.message || err.statusText); this.loading = false; },
+    });
+  }
+
+  applyFix(sql: string) {
+    this.isFixing = true;
+    this.fixMessage = '';
+    fetch('/api/analyze/autofix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sqlScript: sql, serverId: this.result?.metrics?.[0]?.name || 'default' })
+    })
+    .then(res => res.json())
+    .then(data => {
+      this.isFixing = false;
+      this.fixSuccess = data.success !== false;
+      this.fixMessage = data.message || 'Fix applied successfully.';
+    })
+    .catch(err => {
+      this.isFixing = false;
+      this.fixSuccess = false;
+      this.fixMessage = 'Error applying fix: ' + err.message;
     });
   }
 }
