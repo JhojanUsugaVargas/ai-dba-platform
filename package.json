@@ -26,7 +26,11 @@
     "test:oracle-offline": "node --disable-warning=ExperimentalWarning scripts/smoke-oracle-offline.ts",
     "test:e2e": "node scripts/e2e.ts",
     "capture:load": "node scripts/capture-load.ts 4 30",
-    "start": "node --disable-warning=ExperimentalWarning src/server.ts"
+    "start": "node --disable-warning=ExperimentalWarning src/server.ts",
+    "lint": "eslint . --ext .ts,.js",
+    "format": "prettier --write .",
+    "prepare": "husky install",
+    "test": "jest --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
