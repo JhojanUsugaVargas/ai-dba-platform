@@ -2,12 +2,13 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } fr
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService, ServerMetric } from '../../services/api.service';
+import { EmailFormComponent } from '../email-form/email-form.component';
 import Chart from 'chart.js/auto';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, EmailFormComponent],
   template: `
     <div class="dashboard-header">
       <h1>🖥️ AI DBA Platform — Dashboard</h1>
@@ -131,6 +132,8 @@ import Chart from 'chart.js/auto';
       <canvas #cpuChart></canvas>
     </div>
 
+    <app-email-form [metrics]="metrics" (emailSent)="onEmailSent()"></app-email-form>
+
     <div *ngIf="error" class="error-banner">⚠️ {{ error }}</div>
   `,
   styles: [`
@@ -207,6 +210,10 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     this.intervalId = setInterval(() => this.loadMetrics(), 10000);
   }
 
+  onEmailSent() {
+    console.log('Email sent successfully from dashboard.');
+  }
+
   ngAfterViewInit() {
     this.initChart();
   }
@@ -244,6 +251,8 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  private historyLoaded = false;
+
   loadMetrics() {
     this.error = null;
     this.api.getMetrics().subscribe({
@@ -251,7 +260,27 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
         this.metrics = data;
         this.backendOnline = true;
         this.lastRefresh = new Date();
-        this.updateChartData();
+        
+        const mssqlServer = this.metrics.find(s => s.type === 'mssql');
+        if (mssqlServer && !this.historyLoaded) {
+          fetch(`http://localhost:3000/api/metrics/history/${mssqlServer.serverId}`)
+            .then(res => res.json())
+            .then(historyData => {
+              // Populate this.history with historical data
+              this.history = historyData.slice(-20).map((h: any) => ({
+                time: new Date(h.created_at).toLocaleTimeString(),
+                cpu: h.cpu
+              }));
+              this.historyLoaded = true;
+              this.updateChartData();
+            })
+            .catch(err => {
+              console.error('Failed to load history', err);
+              this.updateChartData();
+            });
+        } else {
+          this.updateChartData();
+        }
       },
       error: (err) => {
         this.error = 'No se pudieron cargar las métricas: ' + (err.message || err.statusText);
@@ -265,9 +294,11 @@ export class DashboardComponent implements OnInit, OnDestroy, AfterViewInit {
     const cpu = mssqlServer?.metrics?.cpuUsagePercent ?? 0;
     const time = new Date().toLocaleTimeString();
 
-    this.history.push({ time, cpu });
-    if (this.history.length > 20) {
-      this.history.shift(); // keep last 20 entries
+    if (this.historyLoaded) {
+        this.history.push({ time, cpu });
+        if (this.history.length > 20) {
+          this.history.shift(); // keep last 20 entries
+        }
     }
 
     if (this.chart) {

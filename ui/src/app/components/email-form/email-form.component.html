@@ -1,0 +1,41 @@
+<div class="email-form-container">
+  <h3>Send Manual Email Report</h3>
+  
+  <div *ngIf="successMessage" class="alert alert-success">
+    {{ successMessage }}
+  </div>
+  
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    {{ errorMessage }}
+  </div>
+
+  <div class="form-group">
+    <label for="recipient">Recipient Email</label>
+    <input type="email" id="recipient" [(ngModel)]="recipient" class="form-control" placeholder="recipient@example.com">
+  </div>
+
+  <div class="form-group">
+    <label for="smtpServer">SMTP Server</label>
+    <input type="text" id="smtpServer" [(ngModel)]="smtpServer" class="form-control" placeholder="smtp.gmail.com">
+  </div>
+
+  <div class="form-group">
+    <label for="port">Port</label>
+    <input type="number" id="port" [(ngModel)]="port" class="form-control" placeholder="587">
+  </div>
+
+  <div class="form-group">
+    <label for="senderEmail">Sender Email</label>
+    <input type="email" id="senderEmail" [(ngModel)]="senderEmail" class="form-control" placeholder="sender@example.com">
+  </div>
+
+  <div class="form-group">
+    <label for="appPassword">App Password</label>
+    <input type="password" id="appPassword" [(ngModel)]="appPassword" class="form-control" placeholder="App password">
+    <small class="help-text">For Gmail, use an App Password if 2FA is enabled.</small>
+  </div>
+
+  <button class="btn btn-primary" [disabled]="isSending" (click)="sendEmail()">
+    {{ isSending ? 'Sending...' : 'Send Email' }}
+  </button>
+</div>

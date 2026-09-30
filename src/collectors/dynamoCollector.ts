@@ -1,4 +1,4 @@
-import { DynamoDBClient, ListTablesCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, ListTablesCommand, DescribeTableCommand, DescribeContinuousBackupsCommand } from "@aws-sdk/client-dynamodb";
 import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
 
@@ -59,23 +59,30 @@ export const collectDynamoMetrics = async (config: any) => {
     
     let advancedAudit: any[] = [];
     if (response.TableNames && response.TableNames.length > 0) {
-      const tableName = response.TableNames[0];
-      try {
-        const cwCommand = new GetMetricStatisticsCommand({
-          Namespace: 'AWS/DynamoDB',
-          MetricName: 'ConsumedReadCapacityUnits',
-          Dimensions: [{ Name: 'TableName', Value: tableName }],
-          StartTime: new Date(Date.now() - 3600 * 1000),
-          EndTime: new Date(),
-          Period: 3600,
-          Statistics: ['Sum']
-        });
-        const cwResponse = await cwClient.send(cwCommand);
-        if (cwResponse.Datapoints) {
-          advancedAudit = cwResponse.Datapoints;
+      const tablesToInspect = response.TableNames.slice(0, 50);
+      for (const tName of tablesToInspect) {
+        try {
+          const descCmd = new DescribeTableCommand({ TableName: tName });
+          const descRes = await client.send(descCmd);
+          
+          let pitrStatus = "UNKNOWN";
+          try {
+            const pitrCmd = new DescribeContinuousBackupsCommand({ TableName: tName });
+            const pitrRes = await client.send(pitrCmd);
+            pitrStatus = pitrRes.ContinuousBackupsDescription?.PointInTimeRecoveryDescription?.PointInTimeRecoveryStatus || "UNKNOWN";
+          } catch (e) {
+            console.error(`PITR check error for ${tName}:`, e);
+          }
+          
+          advancedAudit.push({
+            tableName: tName,
+            itemCount: descRes.Table?.ItemCount,
+            tableSizeBytes: descRes.Table?.TableSizeBytes,
+            pitrStatus
+          });
+        } catch (e) {
+          console.error(`Describe table error for ${tName}:`, e);
         }
-      } catch (e) {
-        console.error('CloudWatch metrics error:', e);
       }
     }
 

@@ -50,6 +50,7 @@ import { ApiService } from '../../services/api.service';
                 <option value="postgres">PostgreSQL</option>
                 <option value="mssql">MSSQL</option>
                 <option value="mongodb">MongoDB</option>
+                <option value="documentdb">DocumentDB</option>
                 <option value="redis">Redis</option>
                 <option value="dynamodb">DynamoDB</option>
               </select>

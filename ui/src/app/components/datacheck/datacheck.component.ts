@@ -23,9 +23,14 @@ import { ApiService } from '../../services/api.service';
         class="json-input" [class.has-error]="parseError"></textarea>
       <div class="input-footer">
         <span class="char-count">{{ jsonInput.length }} caracteres</span>
-        <button (click)="runCheck()" [disabled]="loading || !jsonInput.trim()" class="btn btn-primary btn-lg">
-          {{ loading ? '⏳ Analizando...' : '🔍 Ejecutar Análisis' }}
-        </button>
+        <div class="btn-group">
+          <button (click)="downloadCleansed()" [disabled]="loading || !jsonInput.trim()" class="btn btn-sm" style="margin-right: 10px; background: #e0f2f1; color: #00695c;">
+            📥 Descargar CSV Limpio
+          </button>
+          <button (click)="runCheck()" [disabled]="loading || !jsonInput.trim()" class="btn btn-primary btn-lg">
+            {{ loading ? '⏳ Analizando...' : '🔍 Ejecutar Análisis' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -130,6 +135,7 @@ import { ApiService } from '../../services/api.service';
 
     .input-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
     .char-count { font-size: 12px; color: #aaa; }
+    .btn-group { display: flex; align-items: center; }
 
     .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
     .btn-sm { background: #f0f4ff; color: #0f3460; }
@@ -221,6 +227,47 @@ export class DatacheckComponent {
     this.api.postDataCheck(data).subscribe({
       next: (report) => { this.report = report; this.loading = false; },
       error: (err) => { this.parseError = 'Error del servidor: ' + (err.message || err.statusText); this.loading = false; },
+    });
+  }
+
+  downloadCleansed() {
+    this.parseError = null;
+    let data: any[];
+    try {
+      data = JSON.parse(this.jsonInput);
+      if (!Array.isArray(data)) throw new Error('El input debe ser un array JSON []');
+    } catch (e: any) {
+      this.parseError = 'JSON inválido: ' + e.message;
+      return;
+    }
+    
+    this.loading = true;
+    fetch('/api/datacheck/cleanse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data })
+    })
+    .then(async res => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Error al limpiar los datos');
+      }
+      return res.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'cleansed_data.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      this.loading = false;
+    })
+    .catch(err => {
+      this.parseError = err.message;
+      this.loading = false;
     });
   }
 }

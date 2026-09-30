@@ -27,7 +27,8 @@ export async function collectMssqlMetrics(connectionString: string): Promise<any
       osMemoryInfo: { start_time: new Date().toISOString(), cpu_count: 8, ram_mb: 16384, virtual_machine_type_desc: 'NONE' },
       waitStats: [
         { wait_type: 'PAGEIOLATCH_SH', wait_time_ms: 15000, waiting_tasks_count: 200 }
-      ]
+      ],
+      highAvailability: []
     }
   };
 
@@ -210,6 +211,15 @@ export async function collectMssqlMetrics(connectionString: string): Promise<any
       waitStats = waitStatsRes.recordset;
     } catch { }
 
+    let highAvailability = [];
+    try {
+      const haRes = await pool.request().query(`
+        SELECT role_desc, connected_state_desc, synchronization_health_desc
+        FROM sys.dm_hadr_availability_replica_states;
+      `);
+      highAvailability = haRes.recordset;
+    } catch { }
+
     await sql.close();
     
     return {
@@ -225,7 +235,8 @@ export async function collectMssqlMetrics(connectionString: string): Promise<any
         slowQueries,
         backupStatus,
         osMemoryInfo,
-        waitStats
+        waitStats,
+        highAvailability
       }
     };
   } catch (err) {

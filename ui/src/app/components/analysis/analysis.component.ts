@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, SecurityContext } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ApiService, AnalysisResult } from '../../services/api.service';
 
 @Component({
@@ -36,7 +37,7 @@ import { ApiService, AnalysisResult } from '../../services/api.service';
           <span class="section-icon">💡</span>
           <h2>Recomendaciones AI</h2>
         </div>
-        <div class="ai-response">{{ result.aiResult }}</div>
+        <div class="ai-response" [innerHTML]="sanitizedAiResult"></div>
         <div *ngIf="extractedSql" class="autofix-section">
           <button (click)="applyFix(extractedSql)" [disabled]="isFixing" class="btn btn-ai btn-xl" style="margin-top: 15px;">
             ⚡ Aplicar Solución de IA
@@ -160,7 +161,12 @@ export class AnalysisComponent {
   fixMessage = '';
   fixSuccess = false;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private sanitizer: DomSanitizer) {}
+
+  get sanitizedAiResult(): string | null {
+    if (!this.result?.aiResult) return '';
+    return this.sanitizer.sanitize(SecurityContext.HTML, this.result.aiResult);
+  }
 
   get extractedSql(): string | null {
     if (!this.result?.aiResult) return null;

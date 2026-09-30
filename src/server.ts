@@ -6,6 +6,8 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { collectPostgresMetrics } from './collectors/postgresCollector';
 import { collectMssqlMetrics } from './collectors/mssqlCollector';
 import { collectMongoMetrics } from './collectors/mongoCollector';
@@ -17,8 +19,11 @@ import { askSqlAssistant } from './ai/chat';
 import { datacheckRouter } from './routes/datacheckRouter';
 import { verifyToken, loginHandler } from './auth/auth';
 import { generateCMDBPdf } from './services/pdfGenerator.js';
+import { generateComplexPdf } from './services/pdfMakeGenerator.js';
 import { sendReportEmail } from './services/mailer.js';
 import { executeSpBlitz } from './services/blitzRunner';
+import nodemailer from 'nodemailer';
+import { validateRequest, loginSchema, datacheckSchema } from './validators';
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -26,14 +31,32 @@ const PORT = process.env.PORT ?? 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(helmet());
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(generalLimiter);
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // GET /health
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.post('/api/login', loginHandler);
-app.post('/login', loginHandler); // Provide both just in case
+app.post('/api/login', loginLimiter, validateRequest(loginSchema), loginHandler);
+app.post('/login', loginLimiter, validateRequest(loginSchema), loginHandler); // Provide both just in case
 
 // POST /chat & POST /api/chat – answer SQL errors or questions using Gemini
 const handleChat = async (req: express.Request, res: express.Response) => {
@@ -56,7 +79,7 @@ app.use(datacheckRouter);
 app.post('/api/reports/pdf', async (req, res) => {
   try {
     const metrics = req.body;
-    const pdfBuffer = await generateCMDBPdf(metrics);
+    const pdfBuffer = await generateComplexPdf(metrics);
     res.setHeader('Content-Type', 'application/pdf');
     res.send(pdfBuffer);
   } catch (error) {
@@ -88,10 +111,34 @@ app.post('/api/reports/docx', async (req, res) => {
 
 app.post('/api/reports/email', async (req, res) => {
   try {
-    const { metrics, smtp, recipient } = req.body;
+    const { smtpServer, port, sender, appPassword, recipient, metrics } = req.body;
     const serverName = metrics?.name || 'Unknown_Server';
-    const pdfBuffer = await generateCMDBPdf(metrics);
-    await sendReportEmail(smtp, recipient, pdfBuffer, serverName);
+    const pdfBuffer = await generateComplexPdf(metrics);
+    
+    const transporter = nodemailer.createTransport({
+      host: smtpServer,
+      port: port || 587,
+      secure: port === 465,
+      auth: {
+        user: sender,
+        pass: appPassword
+      }
+    });
+
+    const mailOptions = {
+      from: sender,
+      to: recipient,
+      subject: `Database Health Report - ${serverName}`,
+      text: `Please find attached the database health report for ${serverName}.`,
+      attachments: [
+        {
+          filename: `report_${serverName}.pdf`,
+          content: pdfBuffer
+        }
+      ]
+    };
+
+    await transporter.sendMail(mailOptions);
     res.json({ success: true });
   } catch (error) {
     console.error('Email sending error:', error);
@@ -210,7 +257,7 @@ app.get('/metrics', async (_req, res) => {
 });
 
 // POST /analyze – combine metrics + data-quality check, then call AI
-app.post('/analyze', async (req, res) => {
+app.post('/analyze', validateRequest(datacheckSchema), async (req, res) => {
   try {
     const serversData = fs.readFileSync(SERVERS_FILE, 'utf-8');
     const servers = JSON.parse(serversData);

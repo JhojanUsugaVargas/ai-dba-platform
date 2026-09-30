@@ -74,6 +74,10 @@ export class ApiService {
     return this.http.post<any>(`${this.baseUrl}/reports/email`, payload);
   }
 
+  sendManualEmail(smtpConfig: any, metrics: any): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/reports/manual-email`, { smtpConfig, metrics });
+  }
+
   runBlitz(payload: { connectionString?: string, serverId?: string }): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/servers/blitz`, payload);
   }

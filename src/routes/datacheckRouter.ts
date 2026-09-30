@@ -6,6 +6,7 @@ import { Readable } from 'stream';
 import { Client } from 'pg';
 import sql from 'mssql';
 import { Parser } from 'json2csv';
+import { validateRequest, datacheckSchema } from '../validators';
 
 /**
  * POST /datacheck
@@ -16,7 +17,7 @@ export const datacheckRouter = Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-datacheckRouter.post('/datacheck', async (req: Request, res: Response): Promise<void> => {
+datacheckRouter.post('/datacheck', validateRequest(datacheckSchema), async (req: Request, res: Response): Promise<void> => {
   try {
     const data = req.body?.data ?? [];
     const report = await DataCheckService.runCheck(data);
@@ -100,7 +101,7 @@ datacheckRouter.post('/datacheck/table', async (req: Request, res: Response): Pr
   }
 });
 
-datacheckRouter.post('/datacheck/cleanse', async (req: Request, res: Response): Promise<void> => {
+datacheckRouter.post('/datacheck/cleanse', validateRequest(datacheckSchema), async (req: Request, res: Response): Promise<void> => {
   try {
     const data = req.body?.data ?? [];
     if (!Array.isArray(data)) {
